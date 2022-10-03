@@ -1,0 +1,20 @@
+["protostar.config"]
+protostar_version = "0.4.2"
+
+["protostar.project"]
+libs_path = "./lib/cairo_contracts/src"
+
+["protostar.contracts"]
+staking = [
+    "./src/staking.cairo",
+]
+
+stake_token = [
+    "./src/staking_token.cairo",
+]
+
+reward_token = [
+    "./src/reward_token.cairo",
+]
+
+

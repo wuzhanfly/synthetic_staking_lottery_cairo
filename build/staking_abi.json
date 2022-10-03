@@ -1,0 +1,341 @@
+[
+    {
+        "members": [
+            {
+                "name": "pair_owner_address",
+                "offset": 0,
+                "type": "felt"
+            },
+            {
+                "name": "for_stake_address",
+                "offset": 1,
+                "type": "felt"
+            },
+            {
+                "name": "for_stake_name",
+                "offset": 2,
+                "type": "felt"
+            },
+            {
+                "name": "for_reward_address",
+                "offset": 3,
+                "type": "felt"
+            },
+            {
+                "name": "for_reward_name",
+                "offset": 4,
+                "type": "felt"
+            }
+        ],
+        "name": "Pair",
+        "size": 5,
+        "type": "struct"
+    },
+    {
+        "data": [
+            {
+                "name": "added_pair_info",
+                "type": "Pair"
+            },
+            {
+                "name": "added_pair_id",
+                "type": "felt"
+            }
+        ],
+        "keys": [],
+        "name": "add_token_pair_called",
+        "type": "event"
+    },
+    {
+        "data": [
+            {
+                "name": "duration",
+                "type": "felt"
+            },
+            {
+                "name": "pair_id",
+                "type": "felt"
+            }
+        ],
+        "keys": [],
+        "name": "set_rewards_duration_called",
+        "type": "event"
+    },
+    {
+        "data": [
+            {
+                "name": "amount",
+                "type": "felt"
+            },
+            {
+                "name": "pair_id",
+                "type": "felt"
+            },
+            {
+                "name": "updated_at",
+                "type": "felt"
+            },
+            {
+                "name": "finish_at",
+                "type": "felt"
+            }
+        ],
+        "keys": [],
+        "name": "set_reward_amount_called",
+        "type": "event"
+    },
+    {
+        "data": [
+            {
+                "name": "amount",
+                "type": "felt"
+            },
+            {
+                "name": "user_address",
+                "type": "felt"
+            },
+            {
+                "name": "pair_id",
+                "type": "felt"
+            }
+        ],
+        "keys": [],
+        "name": "stake_called",
+        "type": "event"
+    },
+    {
+        "data": [
+            {
+                "name": "amount",
+                "type": "felt"
+            },
+            {
+                "name": "user_address",
+                "type": "felt"
+            },
+            {
+                "name": "pair_id",
+                "type": "felt"
+            }
+        ],
+        "keys": [],
+        "name": "withdraw_called",
+        "type": "event"
+    },
+    {
+        "data": [
+            {
+                "name": "reward",
+                "type": "felt"
+            },
+            {
+                "name": "user_address",
+                "type": "felt"
+            },
+            {
+                "name": "pair_id",
+                "type": "felt"
+            }
+        ],
+        "keys": [],
+        "name": "get_reward_called",
+        "type": "event"
+    },
+    {
+        "inputs": [
+            {
+                "name": "pair_id",
+                "type": "felt"
+            }
+        ],
+        "name": "get_pair_information",
+        "outputs": [
+            {
+                "name": "pair_info",
+                "type": "Pair"
+            },
+            {
+                "name": "reward_duration",
+                "type": "felt"
+            },
+            {
+                "name": "finish_at",
+                "type": "felt"
+            },
+            {
+                "name": "reward_rate",
+                "type": "felt"
+            },
+            {
+                "name": "updated_at",
+                "type": "felt"
+            },
+            {
+                "name": "total_staked",
+                "type": "felt"
+            },
+            {
+                "name": "reward_per_token_stored",
+                "type": "felt"
+            },
+            {
+                "name": "reward_token_balance_in_this_contract",
+                "type": "felt"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "get_last_pair_id",
+        "outputs": [
+            {
+                "name": "last_pair_id",
+                "type": "felt"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "name": "pair_id",
+                "type": "felt"
+            }
+        ],
+        "name": "get_user_info",
+        "outputs": [
+            {
+                "name": "balance_of_staked_token",
+                "type": "felt"
+            },
+            {
+                "name": "user_reward_per_token_paid",
+                "type": "felt"
+            },
+            {
+                "name": "rewards",
+                "type": "felt"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "name": "user_address",
+                "type": "felt"
+            },
+            {
+                "name": "pair_id",
+                "type": "felt"
+            }
+        ],
+        "name": "earned",
+        "outputs": [
+            {
+                "name": "earned",
+                "type": "felt"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "name": "for_stake_token_name",
+                "type": "felt"
+            },
+            {
+                "name": "for_stake_token_address",
+                "type": "felt"
+            },
+            {
+                "name": "for_reward_token_name",
+                "type": "felt"
+            },
+            {
+                "name": "for_reward_token_address",
+                "type": "felt"
+            }
+        ],
+        "name": "add_token_pair",
+        "outputs": [],
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "name": "duration",
+                "type": "felt"
+            },
+            {
+                "name": "pair_id",
+                "type": "felt"
+            }
+        ],
+        "name": "set_rewards_duration",
+        "outputs": [],
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "name": "amount",
+                "type": "felt"
+            },
+            {
+                "name": "pair_id",
+                "type": "felt"
+            }
+        ],
+        "name": "set_reward_amount",
+        "outputs": [],
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "name": "amount",
+                "type": "felt"
+            },
+            {
+                "name": "pair_id",
+                "type": "felt"
+            }
+        ],
+        "name": "stake",
+        "outputs": [],
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "name": "amount",
+                "type": "felt"
+            },
+            {
+                "name": "pair_id",
+                "type": "felt"
+            }
+        ],
+        "name": "withdraw",
+        "outputs": [],
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "name": "pair_id",
+                "type": "felt"
+            }
+        ],
+        "name": "get_reward",
+        "outputs": [],
+        "type": "function"
+    }
+]
