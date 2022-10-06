@@ -39,7 +39,7 @@ func test_staking_contract{syscall_ptr: felt*, range_check_ptr, pedersen_ptr: Ha
     let (id) = IStaking.last_pair_id_storage(contract_address=staking_contract_address);
     assert id = 1;
 
-    //IStaking.set_rewards_duration(staking_contract_address, 1515, 1);
+    IStaking.set_rewards_duration(staking_contract_address, 1515, 1);
 
     return ();
 }
