@@ -51,7 +51,7 @@ func L1_vrf_bridge_address_storage() -> (contract_address: felt) {
 
 //
 // CONSTRUCTOR
-//
+//adresi ata 
 
 
 //
