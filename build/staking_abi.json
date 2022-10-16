@@ -187,11 +187,45 @@
         "type": "function"
     },
     {
+        "inputs": [
+            {
+                "name": "pair_id",
+                "type": "felt"
+            }
+        ],
+        "name": "get_finish_at",
+        "outputs": [
+            {
+                "name": "finish_at",
+                "type": "felt"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
         "inputs": [],
         "name": "get_last_pair_id",
         "outputs": [
             {
                 "name": "last_pair_id",
+                "type": "felt"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "name": "pair_id",
+                "type": "felt"
+            }
+        ],
+        "name": "get_pair_owner",
+        "outputs": [
+            {
+                "name": "pair_owner",
                 "type": "felt"
             }
         ],
