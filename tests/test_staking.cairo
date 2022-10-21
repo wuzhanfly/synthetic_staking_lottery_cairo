@@ -138,6 +138,7 @@ func test_all_functions{syscall_ptr: felt*, range_check_ptr}() {
 
     let (total) = IStaking.get_total_staked(staking_contract_address, 1);
     assert one_hundred_18 = total;
+
     // at time 5, BOB stakes 200 token
     %{ stop_warp = warp(5, ids.staking_contract_address) %}
     %{ stop_prank = start_prank(ids.BOB, ids.staking_contract_address) %}
@@ -238,13 +239,125 @@ func test_all_functions{syscall_ptr: felt*, range_check_ptr}() {
     let (total) = IStaking.get_total_staked(staking_contract_address, 1);
     assert three_hundred_18 = total;
 
-    // get_rewardda olanlar
-    // let (reward_token_balance_ALICE) = IToken.balanceOf(reward_token_address, ALICE);
+    // at time 10 CAROL stakes another 100 and alice claims reward
+    %{ stop_warp = warp(10, ids.staking_contract_address) %}
+    %{ stop_prank = start_prank(ids.CAROL, ids.staking_contract_address) %}
+    IStaking.stake(staking_contract_address, one_hundred_18, 1);
+    %{ stop_prank() %}
+    %{ stop_prank = start_prank(ids.ALICE, ids.staking_contract_address) %}
+    IStaking.get_reward(staking_contract_address, 1);
+    %{ stop_prank() %}
+    %{ stop_warp() %}
 
-    // let thirty_seven_18 = 37 * POW18;
-    // let thirty_seven: Uint256 = Uint256(thirty_seven_18, 0);
+    let (carol_balance) = IToken.balanceOf(staking_token_address, CAROL);
+    assert zero = carol_balance;
 
-    // assert thirty_seven = reward_token_balance_ALICE;
+    let (contract_balance) = IToken.balanceOf(staking_token_address, staking_contract_address);
+    assert four_hundred = contract_balance;
+
+    let (reward_per_token_stored) = IStaking.get_reward_per_token(staking_contract_address, 1);
+    let king_kong = 41 * POW16;  // tekrar hesap
+    assert king_kong = reward_per_token_stored;
+
+    let (updated_at) = IStaking.get_updated_at(staking_contract_address, 1);
+    assert 10 = updated_at;
+
+    let (reward) = IStaking.get_rewards(staking_contract_address, 1, CAROL);
+    let thirteen_18 = 13 * POW18;
+    assert thirteen_18 = reward;
+
+    let (usrpt) = IStaking.get_user_reward_per_token_paid(staking_contract_address, 1, CAROL);
+    assert king_kong = usrpt;
+
+    let (staked) = IStaking.get_balance_of_staked_token(staking_contract_address, 1, CAROL);
+    assert two_hundred_18 = staked;
+
+    let (total) = IStaking.get_total_staked(staking_contract_address, 1);
+    assert four_hundred_18 = total;
+
+    let (reward_token_balance_ALICE) = IToken.balanceOf(reward_token_address, ALICE);
+    let thirty_seven: Uint256 = Uint256(thirty_seven_18, 0);
+    assert thirty_seven = reward_token_balance_ALICE;
+
+    // at time 11, BOB withdraws 200 token
+    %{ stop_warp = warp(11, ids.staking_contract_address) %}
+    %{ stop_prank = start_prank(ids.BOB, ids.staking_contract_address) %}
+    IStaking.withdraw(staking_contract_address, two_hundred_18, 1);
+    %{ stop_prank() %}
+    %{ stop_warp() %}
+
+    let (bob_balance) = IToken.balanceOf(staking_token_address, BOB);
+    assert two_hundred = bob_balance;
+
+    let (contract_balance) = IToken.balanceOf(staking_token_address, staking_contract_address);
+    assert two_hundred = contract_balance;
+
+    let (reward_per_token_stored) = IStaking.get_reward_per_token(staking_contract_address, 1);
+    let king_kong = 44 * POW16;
+    assert king_kong = reward_per_token_stored;
+
+    let (updated_at) = IStaking.get_updated_at(staking_contract_address, 1);
+    assert 11 = updated_at;
+
+    let (reward) = IStaking.get_rewards(staking_contract_address, 1, BOB);
+    let fourty_18 = 40 * POW18;
+    assert fourty_18 = reward;
+
+    let (usrpt) = IStaking.get_user_reward_per_token_paid(staking_contract_address, 1, BOB);
+    assert king_kong = usrpt;
+
+    let (staked) = IStaking.get_balance_of_staked_token(staking_contract_address, 1, BOB);
+    assert 0 = staked;
+
+    let (total) = IStaking.get_total_staked(staking_contract_address, 1);
+    assert two_hundred_18 = total;
+
+    // at time 13, CAROL withdraws 200 token and claims reward
+    // BOB claims reward
+    %{ stop_warp = warp(13, ids.staking_contract_address) %}
+    %{ stop_prank = start_prank(ids.CAROL, ids.staking_contract_address) %}
+    IStaking.withdraw(staking_contract_address, two_hundred_18, 1);
+    IStaking.get_reward(staking_contract_address, 1);
+    %{ stop_prank() %}
+    %{ stop_prank = start_prank(ids.BOB, ids.staking_contract_address) %}
+    IStaking.get_reward(staking_contract_address, 1);
+    %{ stop_prank() %}
+    %{ stop_warp() %}
+
+    let (carol_balance) = IToken.balanceOf(staking_token_address, CAROL);
+    assert two_hundred = carol_balance;
+
+    let (contract_balance) = IToken.balanceOf(staking_token_address, staking_contract_address);
+    assert zero = contract_balance;
+
+    let (reward_per_token_stored) = IStaking.get_reward_per_token(staking_contract_address, 1);
+    let king_kong = 56 * POW16;
+    assert king_kong = reward_per_token_stored;
+
+    let (updated_at) = IStaking.get_updated_at(staking_contract_address, 1);
+    assert 13 = updated_at;
+
+    let (reward) = IStaking.get_rewards(staking_contract_address, 1, CAROL);
+    let thirty_18 = 30 * POW18;
+    assert 0 = reward;
+
+    let (usrpt) = IStaking.get_user_reward_per_token_paid(staking_contract_address, 1, CAROL);
+    assert king_kong = usrpt;
+
+    let (staked) = IStaking.get_balance_of_staked_token(staking_contract_address, 1, CAROL);
+    assert 0 = staked;
+
+    let (total) = IStaking.get_total_staked(staking_contract_address, 1);
+    assert 0 = total;
+
+    let (reward_token_balance_BOB) = IToken.balanceOf(reward_token_address, BOB);
+    let fourty: Uint256 = Uint256(fourty_18, 0);
+    assert fourty = reward_token_balance_BOB;
+
+    let (reward_token_balance_CAROL) = IToken.balanceOf(reward_token_address, CAROL);
+    let fourty_three_18 = 43 * POW18;
+    let fourty_three: Uint256 = Uint256(fourty_three_18, 0);
+    assert fourty_three = reward_token_balance_CAROL;
 
     return ();
 

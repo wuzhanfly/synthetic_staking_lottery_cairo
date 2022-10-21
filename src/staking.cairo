@@ -579,6 +579,14 @@ func withdraw{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
 
     let (caller_address) = get_caller_address();
 
+    let (staked_balance) = balance_of_staked_token.read(
+        user_address=caller_address, pair_id=pair_id
+    );
+
+    with_attr error_message("Cannot withdraw more than staked amount") {
+        assert_le(amount, staked_balance);
+    }
+
     let (pair_info: Pair) = pair_info_storage.read(pair_id=pair_id);
     let uint256_amount: Uint256 = Uint256(amount, 0);
     let for_stake_token_address = pair_info.for_stake_address;
