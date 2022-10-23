@@ -1,5 +1,6 @@
 %lang starknet
 
+from src.interfaces.i_token import IToken
 from starkware.cairo.common.cairo_builtins import HashBuiltin
 from starkware.starknet.common.syscalls import (
     get_caller_address,
@@ -469,7 +470,7 @@ func set_reward_amount{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_che
 
     let uint256_amount: Uint256 = Uint256(amount, 0);
 
-    let (success) = IERC20.transferFrom(
+    let (success) = IToken.transferFrom(
         contract_address=for_reward_token_address,
         sender=caller_address,
         recipient=address_this,
@@ -546,7 +547,7 @@ func stake{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
     let uint256_amount: Uint256 = Uint256(amount, 0);
     let for_stake_token_address = pair_info.for_stake_address;
 
-    let (success) = IERC20.transferFrom(
+    let (success) = IToken.transferFrom(
         for_stake_token_address, caller_address, address_this, uint256_amount
     );
 
@@ -591,7 +592,7 @@ func withdraw{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
     let uint256_amount: Uint256 = Uint256(amount, 0);
     let for_stake_token_address = pair_info.for_stake_address;
 
-    let (success) = IERC20.transfer(for_stake_token_address, caller_address, uint256_amount);
+    let (success) = IToken.transfer(for_stake_token_address, caller_address, uint256_amount);
 
     with_attr error_message("Transfer has failed") {
         assert success = TRUE;
@@ -626,7 +627,7 @@ func get_reward{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}
         let for_reward_token_address = pair_info.for_reward_address;
 
         let uint256_reward: Uint256 = Uint256(reward, 0);
-        let (success) = IERC20.transfer(for_reward_token_address, caller_address, uint256_reward);
+        let (success) = IToken.transfer(for_reward_token_address, caller_address, uint256_reward);
 
         with_attr error_message("Transfer has failed") {
             assert success = TRUE;
@@ -639,55 +640,4 @@ func get_reward{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}
         return ();
     }
     return ();
-}
-
-@contract_interface
-namespace IERC20 {
-    func name() -> (name: felt) {
-    }
-
-    func symbol() -> (symbol: felt) {
-    }
-
-    func decimals() -> (decimals: felt) {
-    }
-
-    func totalSupply() -> (totalSupply: Uint256) {
-    }
-
-    func balanceOf(account: felt) -> (balance: Uint256) {
-    }
-
-    func allowance(owner: felt, spender: felt) -> (remaining: Uint256) {
-    }
-
-    func owner() -> (owner: felt) {
-    }
-
-    func transfer(recipient: felt, amount: Uint256) -> (success: felt) {
-    }
-
-    func transferFrom(sender: felt, recipient: felt, amount: Uint256) -> (success: felt) {
-    }
-
-    func approve(spender: felt, amount: Uint256) -> (success: felt) {
-    }
-
-    func increaseAllowance(spender: felt, added_value: Uint256) -> (success: felt) {
-    }
-
-    func decreaseAllowance(spender: felt, subtracted_value: Uint256) -> (success: felt) {
-    }
-
-    func burn(amount: Uint256) {
-    }
-
-    func transferOwnership(newOwner: felt) {
-    }
-
-    func renounceOwnership() {
-    }
-
-    func mint(to: felt, amount: Uint256) {
-    }
 }

@@ -1,8 +1,8 @@
 %lang starknet
 from starkware.cairo.common.uint256 import Uint256
-from src.i_staking import IStaking
+from src.interfaces.i_staking import IStaking
 from starkware.starknet.common.syscalls import get_block_timestamp
-from src.i_token import IToken
+from src.interfaces.i_token import IToken
 
 const OWNER1 = 10;
 const ALICE = 1;
@@ -360,37 +360,4 @@ func test_all_functions{syscall_ptr: felt*, range_check_ptr}() {
     assert fourty_three = reward_token_balance_CAROL;
 
     return ();
-
-    // an address calls other than owner set rewards duration
 }
-
-// @external
-// func test_example{syscall_ptr: felt*, range_check_ptr}() {
-//     alloc_locals;
-
-// tempvar staking_contract_address: felt;
-//     tempvar staking_token_address: felt;
-//     tempvar reward_token_address: felt;
-
-// %{ ids.staking_contract_address = context.staking_contract_address %}
-//     %{ ids.staking_token_address = context.staking_token_address %}
-//     %{ ids.reward_token_address = context.reward_token_address %}
-
-// IStaking.add_token_pair(
-//         staking_contract_address, 15, staking_token_address, 30, reward_token_address
-//     );
-
-// let (id) = IStaking.get_last_pair_id(staking_contract_address);
-//     assert id = 1;
-
-// %{ stop_warp = warp(10) %}
-
-// let (bt) = get_block_timestamp();
-//     assert bt = 10;
-//     let (finish) = IStaking.get_finish_at(staking_contract_address, 1);
-//     assert finish = 0;
-//     IStaking.set_rewards_duration(staking_contract_address, 1515, 1);
-//     %{ stop_warp() %}
-
-// return ();
-// }
