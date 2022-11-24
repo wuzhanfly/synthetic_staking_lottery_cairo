@@ -63,9 +63,9 @@ func test_all_functions{syscall_ptr: felt*, range_check_ptr}() {
     // set reward amount, warp here because set rew am. assigns finish_at
     // finish_at -> 0 + 50 = 50
     %{ stop_warp = warp(0, ids.staking_contract_address) %}
-
     IStaking.set_reward_amount(staking_contract_address, six_hundred_18, 1);
     %{ stop_warp() %}
+
     let (staking_contract_reward_balance) = IToken.balanceOf(
         reward_token_address, staking_contract_address
     );
