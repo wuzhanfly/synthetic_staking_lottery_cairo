@@ -9,21 +9,14 @@ const OWNER1 = 10;
 const user1 = 20;
 const user2 = 21;
 const user3 = 22;
+const user4 = 23;
 
 const POW18 = 1000000000000000000;
 
 // VRF bridge adresini degistir setuptan yapinca1
-// @external
-// func __setup__() {
-//     %{ context.staking_contract_address = deploy_contract("./src/staking.cairo").contract_address %}
-//     %{ context.stable_token_address = deploy_contract("./src/stable_token.cairo", [ids.OWNER1]).contract_address %}
-//     %{ context.reward_token_address = deploy_contract("./src/reward_token.cairo", [ids.OWNER1]).contract_address %}
-//     %{ context.quadratic_address = deploy_contract("./src/quadratic_ref_lottery_V1.cairo", [ids.OWNER1, context.staking_contract_address, context.stable_token_address, 0]).contract_address %}
-//     return ();  // { "initial_balance": 42, "contract_id": 123 })
-// }
 
 @external
-func test_all_functions{syscall_ptr: felt*, range_check_ptr}() {
+func test_for_four{syscall_ptr: felt*, range_check_ptr}() {
     alloc_locals;
     local staking_contract_address: felt;
     local stable_token_address: felt;
@@ -77,30 +70,33 @@ func test_all_functions{syscall_ptr: felt*, range_check_ptr}() {
 
     %{ stop_prank() %}
 
-    let number_301 = 301 * POW18;
-    let n_301: Uint256 = Uint256(number_301, 0);
-
-    let number_101 = 101 * POW18;
-    let n_101: Uint256 = Uint256(number_101, 0);
+    let number_literal = 300 * POW18 + 101;
+    let n_literal: Uint256 = Uint256(number_literal, 0);
 
     let number_100 = 100 * POW18;
     let n_100: Uint256 = Uint256(number_100, 0);
+
+    let not18_101 = Uint256(101, 0);
     // first batch of users for criticial tests
     %{ stop_prank_token = start_prank(ids.OWNER1, ids.stable_token_address) %}
 
-    IToken.mint(stable_token_address, OWNER1, n_301);
-    IToken.transfer(stable_token_address, user1, n_101);
+    IToken.mint(stable_token_address, OWNER1, n_literal);
+    IToken.transfer(stable_token_address, user1, not18_101);
     IToken.transfer(stable_token_address, user2, n_100);
     IToken.transfer(stable_token_address, user3, n_100);
+    IToken.transfer(stable_token_address, user4, n_100);
     %{ stop_prank_token() %}
 
     %{ stop_prank = start_prank(ids.user1, ids.stable_token_address) %}
-    IToken.approve(stable_token_address, quadratic_address, n_101);
+    IToken.approve(stable_token_address, quadratic_address, not18_101);
     %{ stop_prank() %}
     %{ stop_prank = start_prank(ids.user2, ids.stable_token_address) %}
-    IToken.approve(stable_token_address, quadratic_address, n_100);
+    IToken.approve(stable_token_address, quadratic_address, n_literal);
     %{ stop_prank() %}
     %{ stop_prank = start_prank(ids.user3, ids.stable_token_address) %}
+    IToken.approve(stable_token_address, quadratic_address, n_100);
+    %{ stop_prank() %}
+    %{ stop_prank = start_prank(ids.user4, ids.stable_token_address) %}
     IToken.approve(stable_token_address, quadratic_address, n_100);
     %{ stop_prank() %}
 
@@ -111,33 +107,94 @@ func test_all_functions{syscall_ptr: felt*, range_check_ptr}() {
     IQuadratic.add_new_pool(quadratic_address, 3, 40);
     %{ stop_prank() %}
 
+    let (pool_count) = IQuadratic.get_pool_count(quadratic_address);
+    assert 3 = pool_count;
+
     let (balance) = IToken.balanceOf(stable_token_address, user1);
-    assert n_101 = balance;
+    assert not18_101 = balance;
 
     %{ stop_warp = warp(1, ids.staking_contract_address) %}
     %{ stop_prank = start_prank(ids.user1, ids.quadratic_address) %}
-    IQuadratic.buy_slot(quadratic_address, number_101);
+    IQuadratic.buy_slot(quadratic_address, 101);
     %{ stop_prank() %}
     %{ stop_warp() %}
 
-    // let (balance) = IToken.balanceOf(stable_token_address, quadratic_address);
-    // assert n_101 = balance;
+    let (balance) = IToken.balanceOf(stable_token_address, staking_contract_address);
+    assert not18_101 = balance;
 
-    // let (allowance) = IToken.allowance(
-    //     contract_address=stable_token_address,
-    //     owner=quadratic_address,
-    //     spender=staking_contract_address,
-    // );
-    // assert n_101 = allowance;
+    let (balance1) = IStaking.get_balance_of_staked_token(
+        staking_contract_address, 1, quadratic_address
+    );
 
-    // let (balance1) = IStaking.get_balance_of_staked_token(staking_contract_address, user1, 1);
-    // assert 30 * POW18 = balance1;
+    assert 30 = balance1;
 
-    // let (balance2) = IStaking.get_balance_of_staked_token(staking_contract_address, user1, 2);
-    // assert 30 * POW18 = balance2;
+    // pool count arttir
 
-    // let (balance3) = IStaking.get_balance_of_staked_token(staking_contract_address, user1, 3);
-    // assert 41 * POW18 = balance3;
+    let (balance2) = IStaking.get_balance_of_staked_token(
+        staking_contract_address, 2, quadratic_address
+    );
+    assert 30 = balance2;
 
+    let (balance3) = IStaking.get_balance_of_staked_token(
+        staking_contract_address, 3, quadratic_address
+    );
+    assert 41 = balance3;
+
+    let (user1_balance) = IQuadratic.get_user_balance(quadratic_address, user1);
+    assert 101 = user1_balance;
+
+    let (user1_squared_balance) = IQuadratic.get_user_squared_balance(quadratic_address, user1);
+    assert 10 = user1_squared_balance;
+
+    let (user1id) = IQuadratic.learn_user_id(quadratic_address, user1);
+    assert 1 = user1id;
+
+    %{ stop_warp = warp(5, ids.staking_contract_address) %}
+    %{ stop_prank = start_prank(ids.user2, ids.quadratic_address) %}
+    IQuadratic.buy_slot(quadratic_address, number_100);
+    %{ stop_prank() %}
+    %{ stop_warp() %}
+
+    let (user2id) = IQuadratic.learn_user_id(quadratic_address, user2);
+    assert 2 = user2id;
+
+    %{ stop_warp = warp(6, ids.staking_contract_address) %}
+    %{ stop_prank = start_prank(ids.user3, ids.quadratic_address) %}
+    IQuadratic.buy_slot(quadratic_address, number_100);
+    %{ stop_prank() %}
+    %{ stop_warp() %}
+
+    let (user3id) = IQuadratic.learn_user_id(quadratic_address, user3);
+    assert 3 = user3id;
+
+    let (idle_id) = IQuadratic.get_idle_id(quadratic_address, 2);
+    assert 0 = idle_id;
+
+    %{ stop_warp = warp(10, ids.staking_contract_address) %}
+    %{ stop_prank = start_prank(ids.user2, ids.quadratic_address) %}
+    IQuadratic.sell_slot(quadratic_address, number_100);
+    %{ stop_prank() %}
+    %{ stop_warp() %}
+
+    let (idle_id) = IQuadratic.get_idle_id(quadratic_address, 2);
+    assert 2 = idle_id;
+
+    %{ stop_warp = warp(12, ids.staking_contract_address) %}
+    %{ stop_prank = start_prank(ids.user4, ids.quadratic_address) %}
+    IQuadratic.buy_slot(quadratic_address, number_100);
+    %{ stop_prank() %}
+    %{ stop_warp() %}
+
+    let (id) = IQuadratic.learn_user_id(quadratic_address, user4);
+    assert 2 = id;
+
+    %{ stop_warp = warp(13, ids.staking_contract_address) %}
+    %{ stop_prank = start_prank(ids.user2, ids.quadratic_address) %}
+    IQuadratic.buy_slot(quadratic_address, number_100);
+    %{ stop_prank() %}
+    %{ stop_warp() %}
+
+    let (id) = IQuadratic.learn_user_id(quadratic_address, user2);
+    assert 4 = id;
     return ();
 }
