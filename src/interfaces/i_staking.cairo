@@ -79,4 +79,7 @@ namespace IStaking {
 
     func get_reward(pair_id: felt) {
     }
+
+    func get_only_pair_reward_address(pair_id: felt) -> (reward_address: felt) {
+    }
 }

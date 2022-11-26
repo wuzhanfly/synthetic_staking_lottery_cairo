@@ -6,6 +6,8 @@ from src.interfaces.i_staking import IStaking
 from openzeppelin.access.ownable.library import Ownable
 from openzeppelin.security.pausable.library import Pausable
 
+from starkware.cairo.common.alloc import alloc
+from starkware.starknet.common.messages import send_message_to_l1
 from starkware.cairo.common.cairo_builtins import HashBuiltin
 from starkware.starknet.common.syscalls import (
     get_caller_address,
@@ -24,11 +26,14 @@ from starkware.cairo.common.math import (
 from starkware.cairo.common.math_cmp import is_le, is_not_zero, is_nn
 from starkware.cairo.common.uint256 import Uint256, uint256_le
 from starkware.cairo.common.bool import TRUE, FALSE
+from starkware.cairo.common.pow import pow
 
 struct Offer {
     protocol_name: felt,
     protocol_address: felt,
 }
+
+const REQUEST_RANDOM = 0;
 
 //
 // EVENTS
@@ -36,6 +41,10 @@ struct Offer {
 
 @event
 func migrated_called(new_contract_address: felt) {
+}
+
+@event
+func winner(winner_address: felt, type: felt) {
 }
 
 //
@@ -46,6 +55,7 @@ func migrated_called(new_contract_address: felt) {
 func user_id_storage(user_id: felt) -> (user_address: felt) {
 }
 
+// it could be a struct for user_address -> id_and_balance struct
 @storage_var
 func learn_user_id_storage(user_address: felt) -> (user_id: felt) {
 }
@@ -57,6 +67,7 @@ func user_squared_storage(user_address: felt) -> (user_squared_balance: felt) {
 @storage_var
 func user_balance_storage(user_address: felt) -> (user_balance: felt) {
 }
+// struct end
 
 @storage_var
 func idle_ids_storage(index: felt) -> (idle_id: felt) {
@@ -75,10 +86,6 @@ func user_count_storage() -> (count: felt) {
 }
 
 @storage_var
-func lottery_staked_balance_storage() -> (total_balance: felt) {
-}
-
-@storage_var
 func pool_proportions_by_100_storage(pool_id: felt) -> (proportion_by_100: felt) {
 }
 
@@ -88,10 +95,6 @@ func available_pool_id_storage(index: felt) -> (available_ids: felt) {
 
 @storage_var
 func pool_count_storage() -> (pool_count: felt) {
-}
-
-@storage_var
-func user_pool_balance_storage(pool_id: felt) -> (balance: felt) {
 }
 
 @storage_var
@@ -107,11 +110,19 @@ func stable_token_address_storage() -> (contract_address: felt) {
 }
 
 @storage_var
-func offered_storage(index: felt) -> (Offer: felt) {
+func offered_storage(index: felt) -> (res: Offer) {
 }
 
 @storage_var
 func offered_last_index_storage() -> (res: felt) {
+}
+
+@storage_var
+func lottery_staked_balance_storage() -> (res: felt) {
+}
+
+@storage_var
+func lottery_squared_balance_storage() -> (res: felt) {
 }
 
 //
@@ -316,6 +327,8 @@ func buy_slot{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
         assert_nn(deposit_amount - 1);
     }
 
+    // assert_perfect_square(deposit_amount);
+
     let (staking_address) = staking_protocol_address_storage.read();
     let (stable_address) = stable_token_address_storage.read();
     let (caller) = get_caller_address();
@@ -334,6 +347,9 @@ func buy_slot{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
         remaining_amount=deposit_amount,
     );
 
+    let (lot_staked) = lottery_staked_balance_storage.read();
+    let (lot_squared) = lottery_squared_balance_storage.read();
+
     let (user_balance) = user_balance_storage.read(user_address=caller);
     let (user_squared_balance) = user_squared_storage.read(user_address=caller);
     // if user has 0 amount on lottery, contract assigns a new id to user if all previous ids are full
@@ -343,6 +359,8 @@ func buy_slot{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
         user_count_storage.write(user_count + 1);
 
         user_balance_storage.write(user_address=caller, value=deposit_amount);
+        lottery_staked_balance_storage.write(lot_staked + deposit_amount);
+
         let (idle_id_index) = last_idle_id_index_storage.read();
         let (idle_id) = idle_ids_storage.read(index=idle_id_index);
 
@@ -351,6 +369,7 @@ func buy_slot{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
             learn_user_id_storage.write(user_address=caller, value=user_count + 1);
             let squared_balance = sqrt(deposit_amount);
             user_squared_storage.write(user_address=caller, value=squared_balance);
+            lottery_squared_balance_storage.write(lot_squared + squared_balance);
             return ();
         }
 
@@ -365,6 +384,7 @@ func buy_slot{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
 
             let squared_balance = sqrt(deposit_amount);
             user_squared_storage.write(user_address=caller, value=squared_balance);
+            lottery_squared_balance_storage.write(lot_squared + squared_balance);
             return ();
         }
         last_idle_id_index_storage.write(idle_id_index + 1);
@@ -374,13 +394,16 @@ func buy_slot{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
 
         let squared_balance = sqrt(deposit_amount);
         user_squared_storage.write(user_address=caller, value=squared_balance);
+        lottery_squared_balance_storage.write(lot_squared + squared_balance);
         return ();
     } else {
         user_balance_storage.write(user_address=caller, value=user_balance + deposit_amount);
+        lottery_staked_balance_storage.write(lot_staked + deposit_amount);
         let squared_balance = sqrt(deposit_amount);
         user_squared_storage.write(
             user_address=caller, value=squared_balance + user_squared_balance
         );
+        lottery_squared_balance_storage.write(lot_squared + squared_balance);
         return ();
     }
 }
@@ -395,6 +418,8 @@ func sell_slot{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
     with_attr error_message("withdraw_amount <= 0") {
         assert_nn(withdraw_amount - 1);
     }
+
+    // assert_perfect_square(withdraw_amount);
 
     let (staking_address) = staking_protocol_address_storage.read();
     let (stable_address) = stable_token_address_storage.read();
@@ -420,6 +445,9 @@ func sell_slot{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
     let withdraw_amount_uint: Uint256 = Uint256(withdraw_amount, 0);
     IToken.transfer(stable_address, caller, withdraw_amount_uint);
 
+    let (lot_staked) = lottery_staked_balance_storage.read();
+    let (lot_squared) = lottery_squared_balance_storage.read();
+
     if (remaining_balance == 0) {
         let (user_count) = user_count_storage.read();
         user_count_storage.write(user_count - 1);
@@ -436,7 +464,10 @@ func sell_slot{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
             sell_slot_idle_id_index_storage.write(value=sell_idle_id_index + 1);
 
             user_balance_storage.write(user_address=caller, value=0);
+            lottery_staked_balance_storage.write(lot_staked - withdraw_amount);
             user_squared_storage.write(user_address=caller, value=0);
+            let squared_withdraw = sqrt(withdraw_amount);
+            lottery_squared_balance_storage.write(lot_squared - squared_withdraw);
 
             return ();
         }
@@ -445,28 +476,70 @@ func sell_slot{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
         sell_slot_idle_id_index_storage.write(value=sell_idle_id_index + 1);
 
         user_balance_storage.write(user_address=caller, value=0);
+        lottery_staked_balance_storage.write(lot_staked - withdraw_amount);
+        let squared_withdraw = sqrt(withdraw_amount);
+        lottery_squared_balance_storage.write(lot_squared - squared_withdraw);
         user_squared_storage.write(user_address=caller, value=0);
 
         return ();
     } else {
+        // reamining_sqrt could be hacked in a not that harmful way, should be fixed
         user_balance_storage.write(user_address=caller, value=remaining_balance);
+        lottery_staked_balance_storage.write(lot_staked - withdraw_amount);
         let remaining_sqrt = sqrt(remaining_balance);
         user_squared_storage.write(user_address=caller, value=remaining_sqrt);
+        let squared_withdraw = sqrt(withdraw_amount);
+        lottery_squared_balance_storage.write(lot_squared - squared_withdraw);
         return ();
     }
 }
 
+@external
+func change_VRF_bridge_address{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
+    NEW_address: felt
+) {
+    Ownable.assert_only_owner();
+    L1_vrf_bridge_address_storage.write(NEW_address);
+    return ();
+}
+
 // need to call periodically and after that should consume message on L1
 // 0 == quadratic, 1 == normal
-
-// staked balance ve squared balance takip edilmeli contract boyunca unutmusum.. burada
-// random cekerken lazim olacak
-// sonrasinda bridge okuyup tek atarim basic
 @external
 func distribute_reward_in_time{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
     q_or_n: felt
 ) {
-    return ();
+    alloc_locals;
+    Ownable.assert_only_owner();
+    Pausable.assert_not_paused();
+
+    // quadratic
+    if (q_or_n == 0) {
+        let (lot_squared) = lottery_squared_balance_storage.read();
+        let (L1_CONTRACT_ADDRESS) = L1_vrf_bridge_address_storage.read();
+
+        let (message_payload: felt*) = alloc();
+
+        assert message_payload[0] = REQUEST_RANDOM;
+        assert message_payload[1] = lot_squared;
+        assert message_payload[2] = q_or_n;
+
+        send_message_to_l1(to_address=L1_CONTRACT_ADDRESS, payload_size=3, payload=message_payload);
+        return ();
+    } else {
+        // normal
+        let (lot_staked) = lottery_staked_balance_storage.read();
+        let (L1_CONTRACT_ADDRESS) = L1_vrf_bridge_address_storage.read();
+
+        let (message_payload: felt*) = alloc();
+
+        assert message_payload[0] = REQUEST_RANDOM;
+        assert message_payload[1] = lot_staked;
+        assert message_payload[2] = q_or_n;
+
+        send_message_to_l1(to_address=L1_CONTRACT_ADDRESS, payload_size=3, payload=message_payload);
+        return ();
+    }
 }
 
 //
@@ -475,15 +548,16 @@ func distribute_reward_in_time{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, r
 
 @l1_handler
 func distribute_with_random{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
-    from_address: felt, random_number: felt
+    from_address: felt, random_number: felt, q_or_n: felt
 ) {
-    let l1_address = L1_vrf_bridge_address_storage.read();
+    let (l1_address) = L1_vrf_bridge_address_storage.read();
 
     with_attr error_message("l1 address is not compatible") {
         assert l1_address = from_address;
     }
 
-    let winner_address = distribute_reward(random_number=random_number);
+    distribute_reward(random_number=random_number, q_or_n=q_or_n, user_id=1, balance_tracker=0);
+
     return ();
 }
 
@@ -491,10 +565,93 @@ func distribute_with_random{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, rang
 // FUNCS
 //
 
+// FOR TEST, IT IS EXTERNAL CHANGE IT FOR DEPLOYING
+@external
 func distribute_reward{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
-    random_number: felt
-) -> (winner: felt) {
+    random_number: felt, q_or_n: felt, user_id: felt, balance_tracker: felt
+) {
+    alloc_locals;
     Pausable.assert_not_paused();
+
+    if (q_or_n == 0) {
+        let (lot_squared) = lottery_squared_balance_storage.read();
+
+        if (balance_tracker == lot_squared) {
+            return ();
+        }
+
+        let (user_address) = user_id_storage.read(user_id=user_id);
+        let (squared_balance) = user_squared_storage.read(user_address);
+
+        let bool = is_le(random_number, balance_tracker + squared_balance);
+        if (bool == 1) {
+            let (count) = pool_count_storage.read();
+            get_reward_and_transfer(user_address=user_address, starter_index=1, pool_count=count);
+            winner.emit(winner_address=user_address, type=q_or_n);
+            return ();
+        } else {
+            distribute_reward(
+                random_number=random_number,
+                q_or_n=q_or_n,
+                user_id=user_id + 1,
+                balance_tracker=balance_tracker + squared_balance,
+            );
+            return ();
+        }
+
+        // if random number =< balance_tracker + user balance, that user wins
+    } else {
+        let (lot_staked) = lottery_staked_balance_storage.read();
+
+        if (balance_tracker == lot_staked) {
+            return ();
+        }
+
+        let (user_address) = user_id_storage.read(user_id=user_id);
+        let (staked_balance) = user_balance_storage.read(user_address);
+
+        let bool = is_le(random_number, balance_tracker + staked_balance);
+        if (bool == 1) {
+            let (count) = pool_count_storage.read();
+            get_reward_and_transfer(user_address=user_address, starter_index=1, pool_count=count);
+            winner.emit(winner_address=user_address, type=q_or_n);
+            return ();
+        } else {
+            distribute_reward(
+                random_number=random_number,
+                q_or_n=q_or_n,
+                user_id=user_id + 1,
+                balance_tracker=balance_tracker + staked_balance,
+            );
+            return ();
+        }
+    }
+}
+
+func get_reward_and_transfer{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
+    user_address: felt, starter_index: felt, pool_count: felt
+) {
+    alloc_locals;
+    if (pool_count == 0) {
+        return ();
+    }
+
+    let (available_pool_id) = available_pool_id_storage.read(starter_index);
+    let (staking_address) = staking_protocol_address_storage.read();
+    IStaking.get_reward(staking_address, available_pool_id);
+
+    let (reward_token_address) = IStaking.get_only_pair_reward_address(
+        staking_address, available_pool_id
+    );
+
+    let (lottery_address) = get_contract_address();
+    let (reward_balance: Uint256) = IToken.balanceOf(reward_token_address, lottery_address);
+    IToken.transfer(reward_token_address, user_address, reward_balance);
+
+    get_reward_and_transfer(
+        user_address=user_address, starter_index=starter_index + 1, pool_count=pool_count - 1
+    );
+
     return ();
 }
 
@@ -543,8 +700,6 @@ func add_to_pool_by_proportion{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, r
             contract_address=staking_address, amount=deposit_stake, pair_id=available_pool_id
         );
 
-        // deposit amount yerine remaining+amount koncak sonra  ilk loop icin
-        // remaining amounta deposit amount denecek
         let remaining = remaining_amount - deposit_stake;
 
         add_to_pool_by_proportion(
@@ -618,6 +773,27 @@ func withdraw_from_pool_by_proportion{
         return ();
     }
 }
+
+// func assert_perfect_square{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
+//     check_squared: felt
+// ) -> (status: felt) {
+//     alloc_locals;
+//     let check1 = sqrt(check_squared);
+//     let check2 = pow(check1, 2);
+
+// let bool = 10;
+
+// if (check_squared == check2) {
+//         bool = 1;
+//     } else {
+//         bool = 0;
+//     }
+
+// with_attr error_message("Only perfect squares are allowed") {
+//         assert 1 = bool;
+//     }
+//     return ();
+// }
 
 @external
 func transferOwnership{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(

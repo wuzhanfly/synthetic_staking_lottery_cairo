@@ -25,4 +25,9 @@ namespace IQuadratic {
 
     func get_idle_id(index: felt) -> (id: felt) {
     }
+
+    func distribute_reward(
+        random_number: felt, q_or_n: felt, user_id: felt, balance_tracker: felt
+    ) {
+    }
 }

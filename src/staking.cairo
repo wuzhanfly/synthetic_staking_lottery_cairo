@@ -211,6 +211,15 @@ func update_reward{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_p
 //
 //   VIEW
 //
+
+@view
+func get_only_pair_reward_address{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
+    pair_id: felt
+) -> (reward_address: felt) {
+    let (pair: Pair) = pair_info_storage.read(pair_id);
+    let address = pair.for_reward_address;
+    return (reward_address=address);
+}
 @view
 func get_reward_per_token{syscall_ptr: felt*, pedersen_ptr: HashBuiltin*, range_check_ptr}(
     pair_id: felt

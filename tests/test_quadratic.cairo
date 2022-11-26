@@ -4,6 +4,7 @@ from src.interfaces.i_token import IToken
 from src.interfaces.i_staking import IStaking
 from src.interfaces.i_quadratic import IQuadratic
 from starkware.cairo.common.uint256 import Uint256
+from starkware.cairo.common.math import assert_not_zero
 
 const OWNER1 = 10;
 const user1 = 20;
@@ -27,10 +28,6 @@ func test_for_four{syscall_ptr: felt*, range_check_ptr}() {
     %{ ids.stable_token_address = deploy_contract("./src/stable_token.cairo", [ids.OWNER1]).contract_address %}
     %{ ids.reward_token_address = deploy_contract("./src/reward_token.cairo", [ids.OWNER1]).contract_address %}
     %{ ids.quadratic_address = deploy_contract("./src/quadratic_ref_lottery_V1.cairo", [ids.OWNER1, ids.staking_contract_address, ids.stable_token_address, 0]).contract_address %}
-    // %{ ids.staking_contract_address = context.staking_contract_address %}
-    // %{ ids.stable_token_address = context.stable_token_address %}
-    // %{ ids.reward_token_address = context.reward_token_address %}
-    // %{ ids.quadratic_address = context.quadratic_address %}
 
     %{ stop_prank = start_prank(ids.OWNER1, ids.staking_contract_address) %}
 
@@ -196,5 +193,18 @@ func test_for_four{syscall_ptr: felt*, range_check_ptr}() {
 
     let (id) = IQuadratic.learn_user_id(quadratic_address, user2);
     assert 4 = id;
+
+    // id 2 wins, so user4
+    %{ stop_warp = warp(50, ids.staking_contract_address) %}
+    IQuadratic.distribute_reward(quadratic_address, 12, 0, 1, 0);
+    %{ stop_warp() %}
+
+    let (reward_balance4) = IToken.balanceOf(reward_token_address, user4);
+    let balance4 = reward_balance4.low;
+    assert_not_zero(balance4);
+
+    let (is_0) = IToken.balanceOf(reward_token_address, user1);
+    assert 0 = is_0.low;
+    // give reward other 2 users to test
     return ();
 }

@@ -28,11 +28,12 @@ interface IStarknetCore {
 
 contract Random is VRFConsumerBaseV2 {
    
-   IStarknetCore starknetCore = IStarknetCore(0xde29d060D45901Fb19ED6C6e959EB22d8626708e)
+   IStarknetCore starknetCore = IStarknetCore(0xde29d060D45901Fb19ED6C6e959EB22d8626708e);
 
-   uint256 constant DISTRIBUTE_WITH_RANDOM_SELECTOR =
+  //calculate with get_selector_from_name when you deploy
+   uint256 constant DISTRIBUTE_WITH_RANDOM_SELECTOR = 11111111;
 
-   uint256 l2ContractAddress = 
+   uint256 l2ContractAddress; 
 
    VRFCoordinatorV2Interface COORDINATOR;
 
@@ -85,6 +86,7 @@ contract Random is VRFConsumerBaseV2 {
   }
     // Assigned at request from L2
     uint256 rangeLimit;
+    uint256 q_or_n;
 
     function fulfillRandomWords(
     uint256, /* requestId */
@@ -94,11 +96,12 @@ contract Random is VRFConsumerBaseV2 {
         random_number = (randomWords[0] % rangeLimit) + 1;
         
         // Construct the deposit message's payload.
-        uint256[] memory payload = new uint256[](1);
+        uint256[] memory payload = new uint256[](2);
         payload[0] = random_number;
+        payload[1] = q_or_n;
 
         // Send the message to the StarkNet core contract.
-        starknetCore.sendMessageToL2(l2ContractAddress, DISTRIBUTE_WITH_RANDOM_SELECTOR, payload);
+        starknetCore.sendMessageToL2{value: msg.value}(l2ContractAddress, DISTRIBUTE_WITH_RANDOM_SELECTOR, payload);
     }       
 
     modifier onlyOwner() {
@@ -106,13 +109,15 @@ contract Random is VRFConsumerBaseV2 {
     _;
     }
 
-    function requestRandomFromL2(uint _rangeLimit) external onlyOwner {
-        uint256[] memory payload = new uint256[](2);
+    function requestRandomFromL2(uint _rangeLimit, uint _q_or_n ) external onlyOwner {
+        uint256[] memory payload = new uint256[](3);
         payload[0] = REQUEST_RANDOM;
         payload[1] = _rangeLimit;
+        payload[2] = q_or_n;
 
         starknetCore.consumeMessageFromL2(l2ContractAddress, payload);
         rangeLimit = _rangeLimit;
+        q_or_n = _q_or_n;
         requestRandomWords();
 
     }
